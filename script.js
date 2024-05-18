@@ -1,34 +1,28 @@
-// Import necessary data and constants from the data.js file.
 import { books, authors, genres, BOOKS_PER_PAGE } from "./data.js";
-
-// Initialize page number and matches array.
+import "./BookPreview.js";
 let page = 1;
 let matches = books;
 
-// Utility function to get a DOM element
 const getElement = (selector) => document.querySelector(selector);
 
-// Function to create and append book previews using the Web Component
 const createBookPreviews = (books, container) => {
   const fragment = document.createDocumentFragment();
   books.forEach(({ author, id, image, title }) => {
-    const element = document.createElement("book-preview");
-    element.setAttribute("author", author);
-    element.setAttribute("id", id);
-    element.setAttribute("image", image);
-    element.setAttribute("title", title);
+    const element = document.createElement("button");
+    element.classList = "preview";
+    element.setAttribute("data-preview", id);
+    element.innerHTML = `
+      <img class="preview__image" src="${image}" />
+      <div class="preview__info">
+        <h3 class="preview__title">${title}</h3>
+        <div class="preview__author">${authors[author]}</div>
+      </div>
+    `;
     fragment.appendChild(element);
   });
   container.appendChild(fragment);
 };
 
-// Initial rendering of book previews
-createBookPreviews(
-  matches.slice(0, BOOKS_PER_PAGE),
-  getElement("[data-list-items]")
-);
-
-// Function to create and append options to a select element
 const createOptions = (options, defaultOption, container) => {
   const fragment = document.createDocumentFragment();
   const firstOption = document.createElement("option");
@@ -44,11 +38,6 @@ const createOptions = (options, defaultOption, container) => {
   container.appendChild(fragment);
 };
 
-// Populate genre and author dropdowns
-createOptions(genres, "All Genres", getElement("[data-search-genres]"));
-createOptions(authors, "All Authors", getElement("[data-search-authors]"));
-
-// Set theme based on user's preferred color scheme
 const applyTheme = (theme) => {
   const isNight = theme === "night";
   document.documentElement.style.setProperty(
@@ -59,30 +48,21 @@ const applyTheme = (theme) => {
     "--color-light",
     isNight ? "10, 10, 20" : "255, 255, 255"
   );
-  getElement("[data-settings-theme]").value = isNight ? "night" : "day";
 };
 
-applyTheme(
-  window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "day"
-);
-
-// Update "Show more" button text and state
 const updateShowMoreButton = () => {
   const remainingBooks = matches.length - page * BOOKS_PER_PAGE;
   const button = getElement("[data-list-button]");
   button.innerText = `Show more (${remainingBooks})`;
   button.disabled = remainingBooks <= 0;
   button.innerHTML = `
-        <span>Show more</span>
-        <span class="list__remaining">(${
-          remainingBooks > 0 ? remainingBooks : 0
-        })</span>
-    `;
+    <span>Show more</span>
+    <span class="list__remaining">${
+      remainingBooks > 0 ? remainingBooks : 0
+    }</span>
+  `;
 };
 
-updateShowMoreButton();
-
-// Event listener functions
 const closeOverlay = (selector) => {
   getElement(selector).open = false;
 };
@@ -105,41 +85,31 @@ const applySearchFilters = (filters) => {
   });
 };
 
-// Event listeners
-getElement("[data-search-cancel]").addEventListener("click", () =>
-  closeOverlay("[data-search-overlay]")
-);
-getElement("[data-settings-cancel]").addEventListener("click", () =>
-  closeOverlay("[data-settings-overlay]")
-);
-getElement("[data-header-search]").addEventListener("click", () =>
-  openOverlay("[data-search-overlay]", "[data-search-title]")
-);
-getElement("[data-header-settings]").addEventListener("click", () =>
-  openOverlay("[data-settings-overlay]")
-);
-getElement("[data-list-close]").addEventListener("click", () =>
-  closeOverlay("[data-list-active]")
-);
+const handleSearchCancel = () => closeOverlay("[data-search-overlay]");
 
-getElement("[data-settings-form]").addEventListener("submit", (event) => {
+const handleSettingsCancel = () => closeOverlay("[data-settings-overlay]");
+
+const handleHeaderSearch = () =>
+  openOverlay("[data-search-overlay]", "[data-search-title]");
+
+const handleHeaderSettings = () => openOverlay("[data-settings-overlay]");
+
+const handleSubmitSettings = (event) => {
   event.preventDefault();
   const formData = new FormData(event.target);
   const { theme } = Object.fromEntries(formData);
   applyTheme(theme);
   closeOverlay("[data-settings-overlay]");
-});
+};
 
-getElement("[data-search-form]").addEventListener("submit", (event) => {
+const handleSubmitSearch = (event) => {
   event.preventDefault();
   const formData = new FormData(event.target);
   const filters = Object.fromEntries(formData);
   matches = applySearchFilters(filters);
   page = 1;
-  getElement("[data-list-message]").classList.toggle(
-    "list__message_show",
-    matches.length < 1
-  );
+  const listMessage = getElement("[data-list-message]");
+  listMessage.classList.toggle("list__message_show", matches.length < 1);
   getElement("[data-list-items]").innerHTML = "";
   createBookPreviews(
     matches.slice(0, BOOKS_PER_PAGE),
@@ -148,18 +118,18 @@ getElement("[data-search-form]").addEventListener("submit", (event) => {
   updateShowMoreButton();
   window.scrollTo({ top: 0, behavior: "smooth" });
   closeOverlay("[data-search-overlay]");
-});
+};
 
-getElement("[data-list-button]").addEventListener("click", () => {
+const handleShowMore = () => {
   createBookPreviews(
     matches.slice(page * BOOKS_PER_PAGE, (page + 1) * BOOKS_PER_PAGE),
     getElement("[data-list-items]")
   );
   page += 1;
   updateShowMoreButton();
-});
+};
 
-getElement("[data-list-items]").addEventListener("click", (event) => {
+const handleListItemClick = (event) => {
   const pathArray = Array.from(event.composedPath());
   const active = pathArray.find((node) => node?.dataset?.preview);
   if (active) {
@@ -175,4 +145,44 @@ getElement("[data-list-items]").addEventListener("click", (event) => {
       getElement("[data-list-description]").innerText = book.description;
     }
   }
-});
+};
+
+// Initial setup
+createOptions(genres, "All Genres", getElement("[data-search-genres]"));
+createOptions(authors, "All Authors", getElement("[data-search-authors]"));
+applyTheme(
+  window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "day"
+);
+createBookPreviews(
+  matches.slice(0, BOOKS_PER_PAGE),
+  getElement("[data-list-items]")
+);
+updateShowMoreButton();
+
+// Event listeners
+getElement("[data-search-cancel]").addEventListener(
+  "click",
+  handleSearchCancel
+);
+getElement("[data-settings-cancel]").addEventListener(
+  "click",
+  handleSettingsCancel
+);
+getElement("[data-header-search]").addEventListener(
+  "click",
+  handleHeaderSearch
+);
+getElement("[data-header-settings]").addEventListener(
+  "click",
+  handleHeaderSettings
+);
+getElement("[data-list-close]").addEventListener("click", () =>
+  closeOverlay("[data-list-active]")
+);
+getElement("[data-settings-form]").addEventListener(
+  "submit",
+  handleSubmitSettings
+);
+getElement("[data-search-form]").addEventListener("submit", handleSubmitSearch);
+getElement("[data-list-button]").addEventListener("click", handleShowMore);
+getElement("[data-list-items]").addEventListener("click", handleListItemClick);
