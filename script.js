@@ -1,4 +1,4 @@
-{ books, authors, genres, BOOKS_PER_PAGE } from './data.js';
+import { books, authors, genres, BOOKS_PER_PAGE } from './data.js';
 
 // Define the BookPreview class
 class BookPreview extends HTMLElement {
