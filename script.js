@@ -1,6 +1,16 @@
 // Import necessary data and constants from the data.js file.
 import { books, authors, genres, BOOKS_PER_PAGE } from "./data.js";
 
+class BookListComponent extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.page = 1;
+    this.matches = books;
+    this.shadowRoot.innerHTML = <style>*preview {}</style>;
+  }
+}
+
 // Initialize page number and matches array.
 let page = 1;
 let matches = books;
